@@ -83,7 +83,6 @@ class JAFAR(nn.Module):
 
         # Attention layer
         out = self.cross_decode(queries, keys, values)
-
         return out
 
     def forward(self, image, features, output_size):

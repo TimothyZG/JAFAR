@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+
+input_dim: 3
+feature_dim: ${get_feature:${backbone.name} ${backbone.adaptor_names}}
+name: anyup

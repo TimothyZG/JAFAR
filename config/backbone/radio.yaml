@@ -1,3 +1,4 @@
 _target_: src.backbone.radio.RadioWrapper
 name: radio_v2.5-b  # Change as needed: radio_v2.5-g, radio_v2.5-l, etc.
 device: cuda
+adaptor_names: None # 'clip', 'siglip', 'dino_v2', 'sam'

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import hydra
+import wandb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -152,6 +153,13 @@ class UpsamplerEvaluator:
         if metrics is not None:
             for metric_name, metric_value in metrics.items():
                 self.writer.add_scalar(f"Metrics/{metric_name}", metric_value, step)
+    def log_wandb(self, step, loss=None, metrics=None):
+        log_dict = {}
+        if loss is not None:
+            log_dict["Loss/Step"] = loss
+        if metrics is not None:
+            log_dict.update({f"Metrics/{k}": v for k, v in metrics.items()})
+        wandb.log(log_dict, step=step)
 
     def process_batch(self, image_batch, target, is_training=True):
         H, W = target.shape[-2:]
@@ -303,7 +311,7 @@ class UpsamplerEvaluator:
                 progress.refresh()
 
                 # Log loss to TensorBoard
-                self.log_tensorboard(len(train_dataloader) + batch_idx, loss=avg_loss)
+                self.log_wandb(len(train_dataloader)*epoch + batch_idx, loss=avg_loss)
 
             if self.cfg.sanity and batch_idx == 0:
                 break
@@ -400,7 +408,7 @@ class UpsamplerEvaluator:
                 metrics[k] = results[k] / nsamples
 
         # Log metrics to TensorBoard
-        self.log_tensorboard(step=epoch, metrics=metrics)
+        self.log_wandb(step=epoch, metrics=metrics)
 
         self.log_print(f"[bold green]Results: {metrics}[/bold green]")
         return
@@ -518,7 +526,7 @@ def main(cfg):
         )
 
         start_time = datetime.datetime.now()
-
+        wandb.init(project=f"{cfg.dataset_evaluation.tag}-{cfg.eval.task}-lp_probe", name=f"{cfg.backbone.name}-{cfg.model.name}", config=OmegaConf.to_container(cfg, resolve=True))
         with progress:
             # Standard training for upsampler
             log_print(f"[yellow]Training for {cfg.num_epochs} epochs[/yellow]\n")
@@ -533,6 +541,7 @@ def main(cfg):
 
     file_console.file.close()
     writer.close()  # Close TensorBoard writer
+    wandb.finish()
 
 
 if __name__ == "__main__":

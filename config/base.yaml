@@ -1,6 +1,6 @@
 # conf/config.yaml
 defaults:
-  - model: jafar
+  - model: anyup #jafar
   - backbone: base
   - optimizer: adamw
   - loss: base
@@ -15,7 +15,7 @@ img_size: 448
 epochs: 1
 max_steps: 100_000
 project_root: ${hydra:runtime.cwd}
-dataroot: ${project_root}/data/imagenet
+dataroot: ${project_root}/../datasets
 
 bfloat16: True 
 ratio: random

@@ -1,12 +1,13 @@
 defaults:
   - base
-  - dataset_evaluation: voc
+  - dataset_evaluation: ade20k
   - _self_
 
 # Evaluation settings
 eval:
   task: "seg"  
   model_ckpt: null
+  upsampler: anyup
 
 num_epochs: 20
 

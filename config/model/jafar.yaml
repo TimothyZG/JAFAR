@@ -5,7 +5,7 @@ _target_: src.upsampler.JAFAR
 input_dim: 3
 qk_dim: 128
 v_dim: ${model.feature_dim}
-feature_dim: ${get_feature:${backbone.name}}
+feature_dim: ${get_feature:${backbone.name} ${backbone.adaptor_names}}
 kernel_size: 1
 num_heads: 4
 name: jafar

@@ -1,5 +1,5 @@
 _target_: evaluation.dataset.ade20k.ADE20KDataset
-root: "${project_root}/data/ADEChallengeData2016"
+root: "${project_root}/../datasets/ADEChallengeData2016"
 split: "train"
 skip_other_class: false
 file_set: null
