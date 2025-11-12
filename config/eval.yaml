@@ -9,16 +9,17 @@ eval:
   model_ckpt: null
   upsampler: anyup
 
-num_epochs: 20
+num_epochs: 8
 
 optimizer: 
-  lr: 5e-4
+  lr: 1e-3
+  wd: 1e-5
 
 train_dataloader:
-  batch_size: 2
+  batch_size: 32
 
 val_dataloader:
-  batch_size: 1
+  batch_size: 4
 
 img_size: 448
 target_size: ${img_size}

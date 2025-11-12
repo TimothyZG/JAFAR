@@ -2,13 +2,13 @@ import torch
 from PIL import Image
 from torch import nn
 from torch.nn import functional as F
-from torchvision.transforms.functional import pil_to_tensor
-
+import torchvision.transforms as T
+from torchvision.transforms.functional import InterpolationMode
 
 class RadioWrapper(nn.Module):
     """
     RADIO backbone wrapper.
-    Note: Input must be a PIL Image. RADIO expects input values in [0, 1] (float32).
+    Note: Input must be a PIL Image (tz edit: tensor, not image). RADIO expects input values in [0, 1] (float32).
     RADIO will automatically normalize to mean 0, std 1 internally.
     """
 
@@ -42,7 +42,13 @@ class RadioWrapper(nn.Module):
                 self.embed_dim = 1280
             self.embed_dim = 768
         self.patch_size = 1
-
+    def make_image_transform(self, img_size):
+        """Create transform for RADIO - resize for batching, convert to tensor."""
+        return T.Compose([
+            T.Resize(img_size, interpolation=InterpolationMode.BILINEAR),
+            T.CenterCrop((img_size, img_size)),
+            T.ToTensor()
+        ])
     def preprocess(self, img: Image.Image):
         x = img
         nearest_res = self.model.get_nearest_supported_resolution(*x.shape[-2:])
@@ -52,7 +58,7 @@ class RadioWrapper(nn.Module):
         return x
 
     @torch.no_grad()
-    def forward(self, img: Image.Image):
+    def forward(self, img):
         x = self.preprocess(img)
         # Only return spatial_features in NCHW format
         out = self.model(x, feature_fmt="NCHW")

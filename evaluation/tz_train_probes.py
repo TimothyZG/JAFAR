@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchmetrics.classification import Accuracy, JaccardIndex
 from einops import rearrange
 from hydra.utils import instantiate
 from tqdm import tqdm
@@ -75,8 +76,10 @@ class UpsamplerEvaluator:
         self.classifier = nn.Conv2d(self.backbone.embed_dim, # cfg.model.feature_dim,
                                     cfg.metrics.seg.num_classes if cfg.eval.task=="seg" else 1,
                                     1).to(device)
-        self.optimizer = torch.optim.Adam(self.classifier.parameters(), lr=cfg.optimizer.lr)
+        self.optimizer = torch.optim.AdamW(self.classifier.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.wd)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=cfg.num_epochs)
+        self.iou_metric = JaccardIndex(num_classes=cfg.metrics.seg.num_classes, task="multiclass").to(device)
+        self.accuracy_metric = Accuracy(num_classes=cfg.metrics.seg.num_classes, task="multiclass").to(device)
 
     def process_batch(self, batch):
         batch = get_batch(batch, self.device)
@@ -94,10 +97,14 @@ class UpsamplerEvaluator:
         if pred.shape[-2:] != target.shape[-2:]:
             pred = F.interpolate(pred, size=target.shape[-2:], mode="bilinear")
 
+        valid_mask = target != 255
+        
         if self.cfg.eval.task == "seg":
             pred = rearrange(pred, "b c h w -> (b h w) c")
             target = rearrange(target, "b h w -> (b h w)")
-
+            valid_mask = rearrange(valid_mask, "b h w -> (b h w)")
+        pred = pred[valid_mask]
+        target = target[valid_mask]
         return pred, target
 
     def train(self, train_loader, epoch):
@@ -128,37 +135,29 @@ class UpsamplerEvaluator:
         self.classifier.eval()
         results = {}
         nsamples = 0
-
-        num_classes = self.cfg.metrics.seg.num_classes if self.cfg.eval.task == "seg" else 1
-
-        for batch in tqdm(val_loader, desc="Evaluating"):
+        if self.cfg.eval.task == "seg":
+            self.iou_metric.reset()
+            self.accuracy_metric.reset()
+        for batch in tqdm(val_loader, desc="Evaluating",mininterval=5):
             pred, target = self.process_batch(batch)
             if self.cfg.eval.task == "seg":
                 pred_labels = pred.argmax(dim=1)
-                acc = (pred_labels == target).float().mean().item()
-                results["val_accuracy"] = results.get("val_accuracy", 0) + acc
-
-                # Compute IoU per class
-                iou_per_class = []
-                for cls in range(num_classes):
-                    pred_mask = pred_labels == cls
-                    target_mask = target == cls
-                    intersection = (pred_mask & target_mask).sum().item()
-                    union = (pred_mask | target_mask).sum().item()
-                    if union > 0:
-                        iou_per_class.append(intersection / union)
-                if iou_per_class:
-                    results["val_mIoU"] = results.get("val_mIoU", 0) + sum(iou_per_class) / len(iou_per_class)
-
+                self.iou_metric.update(pred, target)
+                self.accuracy_metric.update(pred_labels, target)
             else:
-                cur_results = eval_metrics(target.cpu().numpy(), pred.cpu().numpy())
-                for k, v in cur_results.items():
+                gt = target.cpu().numpy().reshape(-1)
+                pd = pred.cpu().numpy().reshape(-1)
+                cur = eval_metrics(gt, pd)
+                for k, v in cur.items():
                     results[k] = results.get(k, 0) + v
             nsamples += 1
-
+        if self.cfg.eval.task == "seg":
+            results["val_mIoU"]=self.iou_metric.compute().item()
+            results["val_accuracy"]=self.accuracy_metric.compute().item()
         # Average over batches
-        for k in results:
-            results[k] /= nsamples
+        if self.cfg.eval.task != "seg":
+            for k in results:
+                results[k] /= nsamples
 
         print(f"[Epoch {epoch}] Evaluation Results: {results}")
         wandb.log(results)
@@ -177,10 +176,10 @@ def main(cfg):
     upsampler = UpsamplerWrapper(cfg).to(device)
     evaluator = UpsamplerEvaluator(backbone, upsampler, device, cfg)
     if getattr(cfg.backbone, "adaptor_names", None):
-        wandb_name=f"bb:{cfg.backbone.name}-adp:{cfg.backbone.adaptor_names}-ups:{cfg.eval.upsampler}"
+        wandb_name=f"bb:{cfg.backbone.name}-adp:{cfg.backbone.adaptor_names}-res:{cfg.img_size}"
     else:
-        wandb_name=f"bb:{cfg.backbone.name}-ups:{cfg.eval.upsampler}"
-    wandb.init(project=f"{cfg.dataset_evaluation.tag}-{cfg.eval.task}-lp_probe",
+        wandb_name=f"bb:{cfg.backbone.name}-res:{cfg.img_size}"
+    wandb.init(project=f"{cfg.dataset_evaluation.tag}-{cfg.eval.task}-lp",
                name=wandb_name, config=OmegaConf.to_container(cfg, resolve=False))
 
     for epoch in range(cfg.num_epochs):
@@ -189,12 +188,14 @@ def main(cfg):
 
     # Save trained classifier
     try:
+        checkpoints_folder="checkpoints/semseg-linear"
         if getattr(cfg.backbone, "adaptor_names", None):
             cls_filename=f"{cfg.backbone.name}-{cfg.backbone.adaptor_names}-{cfg.eval.upsampler}-{cfg.eval.task}-classifier.pth"
         else: 
             cls_filename=f"{cfg.backbone.name}-{cfg.eval.upsampler}-{cfg.eval.task}-classifier.pth"
         save_path = os.path.join(
             cfg.project_root, 
+            checkpoints_folder, 
             cls_filename
         )
         torch.save(evaluator.classifier.state_dict(), save_path)

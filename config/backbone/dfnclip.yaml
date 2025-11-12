@@ -1,0 +1,3 @@
+_target_: src.backbone.dfnclip.DFNCLIPWrapper
+name: DFN-CLIP-ViT-B-16  # Change as needed by hydra overwrite when initiating the job
+device: cuda

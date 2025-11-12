@@ -6,11 +6,11 @@
 #SBATCH --mail-type=ALL
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=16G
+
+export HYDRA_FULL_ERROR=1
 
 UPSAMPLER=none # bilinear, anyup, none
-BACKBONE=radio # base (vit_small), radio, dinov2
-ADAPTOR=backbone # backbone, dino_v2, sam, siglip, clip
 module load python/3.10
 module load scipy-stack
 virtualenv --no-download $SLURM_TMPDIR/env
@@ -19,9 +19,29 @@ pip install --no-index --upgrade pip -q
 pip install -r requirements.txt -q
 
 # For RADIO
-python -u evaluation/tz_train_probes.py backbone=$BACKBONE backbone.name=radio_v2.5-b  eval.upsampler=$UPSAMPLER backbone.adaptor_names=$ADAPTOR
+ADAPTOR=backbone # backbone, dino_v2, sam, siglip, clip
+# python -u evaluation/tz_train_probes.py backbone=radio backbone.name=radio_v2.5-b  eval.upsampler=$UPSAMPLER backbone.adaptor_names=$ADAPTOR img_size=512
 
-# For DINO
-# python -u evaluation/tz_train_probes.py backbone=$BACKBONE backbone.name=dinov2_vitb14_reg eval.upsampler=$UPSAMPLER
+# For DINO v2
+# python -u evaluation/tz_train_probes.py backbone=dinov2 backbone.name=dinov2-base eval.upsampler=$UPSAMPLER img_size=518
+python -u evaluation/tz_eval_probes.py backbone=dinov2 backbone.name=dinov2-base eval.upsampler=$UPSAMPLER img_size=518
+
+# For DINO v3
+# python -u evaluation/tz_train_probes.py backbone=dinov3 backbone.name=dinov3-vitb16-pretrain-lvd1689m eval.upsampler=$UPSAMPLER img_size=512
+
+# For SigLIP 
+# python -u evaluation/tz_train_probes.py backbone=siglip backbone.name=siglip-base-patch16-512 eval.upsampler=$UPSAMPLER img_size=512
+
+# For SigLIP v2
+# python -u evaluation/tz_train_probes.py backbone=siglip backbone.name=siglip2-base-patch16-512 eval.upsampler=$UPSAMPLER img_size=512
+
+# For Franca
+# python -u evaluation/tz_train_probes.py backbone=franca backbone.name=franca_vitb14 backbone.weights=IN21K eval.upsampler=$UPSAMPLER img_size=518 # IN21K (b,l,g) or LAION (l,g)
+
+# For DFN CLIP
+# python -u evaluation/tz_train_probes.py backbone=dfnclip backbone.name=DFN2B-CLIP-ViT-B-16 eval.upsampler=$UPSAMPLER img_size=224
+
+# For SAM
+# python -u evaluation/tz_train_probes.py backbone=sam backbone.name=samvit_base_patch16.sa1b eval.upsampler=$UPSAMPLER img_size=512 train_dataloader.batch_size=4
 
 # sbatch evaluation/tz_train_probes.sh

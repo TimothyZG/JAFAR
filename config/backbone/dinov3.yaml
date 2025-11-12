@@ -1,0 +1,3 @@
+_target_: src.backbone.dinov3.DinoV3Wrapper
+name: dinov3-vits16-pretrain-lvd1689m  # Change as needed:  dinov3-vits16-pretrain-lvd1689m
+device: cuda

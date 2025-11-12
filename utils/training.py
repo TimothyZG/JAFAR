@@ -58,15 +58,19 @@ def get_dataloaders(cfg, backbone, is_evaluation=False, mean=None, std=None, shu
             std = default_std
             print(f"Warning: Using default std values: {std}")
 
+    """
+    Here's the original image transforms for reference, we need to handle teachers, each needing different transforms, hence we leave it to teacher wrappers.
+    # T.Compose(
+    #     [
+    #         T.Resize(cfg.img_size, interpolation=InterpolationMode.BILINEAR),
+    #         T.CenterCrop((cfg.img_size, cfg.img_size)),
+    #         T.ToTensor(),
+    #         T.Normalize(mean=mean, std=std),
+    #     ]
+    # )
+    """
     transforms = {
-        "image": T.Compose(
-            [
-                T.Resize(cfg.img_size, interpolation=InterpolationMode.BILINEAR),
-                T.CenterCrop((cfg.img_size, cfg.img_size)),
-                T.ToTensor(),
-                T.Normalize(mean=mean, std=std),
-            ]
-        ),
+        "image": backbone.make_image_transform(cfg.img_size),
         "label": (
             T.Compose(
                 [

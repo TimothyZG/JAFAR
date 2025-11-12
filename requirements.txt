@@ -13,3 +13,4 @@ torchmetrics==1.6.2
 transformers
 wandb
 open_clip_torch
+sentencepiece

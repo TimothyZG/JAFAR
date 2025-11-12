@@ -6,3 +6,4 @@ data/
 gitignore
 logs
 checkpoints
+inference_outputs/
