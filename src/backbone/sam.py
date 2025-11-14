@@ -1,45 +1,53 @@
 import torch
-from PIL import Image
 from torch import nn
 import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
-from transformers import AutoProcessor, SiglipVisionModel, Siglip2VisionModel
 import timm
 
 
 class SamWrapper(nn.Module):
     """
-    SigLIP backbone wrapper.
+    SAM backbone wrapper.
     """
 
-    def __init__(self, name="samvit_base_patch16.sa1b", device="cuda"):
+    def __init__(self, name="samvit_base_patch16.sa1b", device="cuda",res=1024):
         super().__init__()
         self.name = name
         self.device = device
         self.patch_size=16 # All SAM ViTs has patch size 16
         self.model=timm.create_model(name,pretrained=True,num_classes=0)
         self.model.to(device)
-        data_config = timm.data.resolve_model_data_config(self.model)
-        self.transforms = timm.data.create_transform(**data_config, is_training=False)
-
+        self.res=res
         self.model.eval()
         if "base" in name:
-            self.embed_dim = 256
+            self.embed_dim = 768
         elif "large" in name:
-            self.embed_dim = 512
-        elif "huge" in name:
             self.embed_dim = 1024
         else:
             raise ValueError(f"Unknown SAM model variant: {name}")
 
-    def make_image_transform(self, img_size):
-        """Create transform for SigLIP - resize for batching, convert to tensor."""
-        return self.transforms
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
+        """Create transform for SAM - just use timm's create trasform"""
+        return T.Compose([
+            T.Resize(self.res, interpolation=InterpolationMode.BICUBIC),
+            T.CenterCrop((self.res, self.res)),
+            T.ToTensor(),
+            T.Normalize(mean=(0.48145466, 0.4578275, 0.40821073),
+                       std=(0.26862954, 0.26130258, 0.27577711))
+        ])
 
     @torch.no_grad()
     def forward(self, img):
-        spacial = self.model.forward_features(img) # B,C,H,W
-        cls = self.model.forward_head(spacial, pre_logits=True)
+        x = self.model.patch_embed(img)
+        x = self.model.pos_drop(x)
+        x = self.model.patch_drop(x)
+        x = self.model.norm_pre(x)
+        spacial = self.model.blocks(x).permute(0,3,1,2) # B,C,H,W is the desired output shape
+        x = self.model.neck(spacial)
+        cls = self.model.head(x)
         B,C,H,W = spacial.shape
         expected = img.shape[2] // self.patch_size         # e.g., 1024/16 = 64
         assert H == expected and W == expected, f"Expected {expected}x{expected}, got {H}x{W}"

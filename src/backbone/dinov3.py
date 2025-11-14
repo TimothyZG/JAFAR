@@ -10,7 +10,7 @@ class DinoV3Wrapper(nn.Module):
     DinoV3 backbone wrapper.
     """
 
-    def __init__(self, name="dinov3-vits16-pretrain-lvd1689m", device="cuda"):
+    def __init__(self, name="dinov3-vits16-pretrain-lvd1689m", device="cuda",res=512):
         super().__init__()
         self.name = name
         self.device = device
@@ -19,7 +19,7 @@ class DinoV3Wrapper(nn.Module):
         self.model = AutoModel.from_pretrained(hg_name)
         self.model.to(device)
         self.processor = AutoImageProcessor.from_pretrained(hg_name, do_rescale=False, do_center_crop=False, do_resize=False)
-        
+        self.res = res
         self.model.eval()
         if "vits" in name:
             self.embed_dim = 384
@@ -32,11 +32,14 @@ class DinoV3Wrapper(nn.Module):
         else:
             raise ValueError(f"Unknown DINOv3 model variant: {name}")
 
-    def make_image_transform(self, img_size):
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
         """Create transform for RADIO - resize for batching, convert to tensor."""
         return T.Compose([
-            T.Resize(img_size, interpolation=InterpolationMode.BILINEAR),
-            T.CenterCrop((img_size, img_size)),
+            T.Resize(self.res, interpolation=InterpolationMode.BILINEAR),
+            T.CenterCrop((self.res, self.res)),
             T.ToTensor()
         ])
         

@@ -8,7 +8,7 @@ class FrancaWrapper(nn.Module):
     Franca backbone wrapper.
     """
 
-    def __init__(self, name="franca_vitb14", device="cuda", weights="LAION", use_rasa_head=True):
+    def __init__(self, name="franca_vitb14", device="cuda", weights="LAION", use_rasa_head=True, res=518):
         super().__init__()
         self.name = name
         self.device = device
@@ -18,6 +18,7 @@ class FrancaWrapper(nn.Module):
         self.model.eval()
         self.weights=weights
         self.use_rasa_head = use_rasa_head
+        self.res=res
         embed_map = {'vits': 384, 'vitb': 768, 'vitl': 1024, 'vitg': 1536}
         for k,v in embed_map.items():
             if k in name:
@@ -26,10 +27,13 @@ class FrancaWrapper(nn.Module):
         else:
             raise ValueError(f"Unknown Franca model variant: {name}")
 
-    def make_image_transform(self, img_size):
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
         return T.Compose([
-            T.Resize(img_size, interpolation=T.InterpolationMode.BICUBIC),
-            T.CenterCrop(img_size),
+            T.Resize(self.res, interpolation=T.InterpolationMode.BICUBIC),
+            T.CenterCrop(self.res),
             T.ToTensor(),
             T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         ])

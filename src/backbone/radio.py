@@ -12,41 +12,44 @@ class RadioWrapper(nn.Module):
     RADIO will automatically normalize to mean 0, std 1 internally.
     """
 
-    def __init__(self, name="radio_v2.5-b", device="cuda", adaptor_names=None):
+    def __init__(self, name="radio_v2.5-b", device="cuda", adaptor_name=None, res=512):
         super().__init__()
         self.name = name
         self.device = device
-        self.adaptor_names=adaptor_names if adaptor_names!="backbone" else None
+        self.adaptor_name=adaptor_name if adaptor_name!="backbone" else None
+        self.res=res
         self.model = torch.hub.load(
             "NVlabs/RADIO",
             "radio_model",
             version=name,
             progress=True,
             skip_validation=True,
-            adaptor_names=adaptor_names if adaptor_names!="backbone" else None
+            adaptor_names=adaptor_name if adaptor_name!="backbone" else None
         )
         self.config = {"mean": torch.tensor([0.0, 0, 0]), "std": torch.tensor([1.0, 1, 1])}  # RADIO normalizes internally
         self.model.to(self.device).eval()
         if name == "radio_v2.5-h":
             self.embed_dim = 1280
         elif name == "radio_v2.5-b":
-            self.embed_dim = 768
-        if name == "radio_v2.5-b":
-            if adaptor_names=="sam":
+            if adaptor_name=="sam":
                 self.embed_dim = 1280
-            elif adaptor_names=="dino_v2":
+            elif adaptor_name=="dino_v2":
                 self.embed_dim = 1536
-            elif adaptor_names=="siglip2":
+            elif adaptor_name=="siglip":
                 self.embed_dim = 1152
-            elif adaptor_names=="clip":
+            elif adaptor_name=="clip":
                 self.embed_dim = 1280
-            self.embed_dim = 768
+            else: self.embed_dim = 768
         self.patch_size = 1
-    def make_image_transform(self, img_size):
+    def get_identifiable_name(self):
+        adaptor_name=self.adaptor_name if self.adaptor_name else "backbone"
+        return self.name+f"-{adaptor_name}"
+    
+    def make_image_transform(self):
         """Create transform for RADIO - resize for batching, convert to tensor."""
         return T.Compose([
-            T.Resize(img_size, interpolation=InterpolationMode.BILINEAR),
-            T.CenterCrop((img_size, img_size)),
+            T.Resize(self.res, interpolation=InterpolationMode.BILINEAR),
+            T.CenterCrop((self.res, self.res)),
             T.ToTensor()
         ])
     def preprocess(self, img: Image.Image):
@@ -62,8 +65,8 @@ class RadioWrapper(nn.Module):
         x = self.preprocess(img)
         # Only return spatial_features in NCHW format
         out = self.model(x, feature_fmt="NCHW")
-        if self.adaptor_names:
-            _, spatial_features = out[self.adaptor_names]
+        if self.adaptor_name:
+            _, spatial_features = out[self.adaptor_name]
         else:
             _, spatial_features = out
         assert spatial_features.ndim == 4

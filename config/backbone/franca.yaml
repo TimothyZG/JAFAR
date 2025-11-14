@@ -1,5 +1,6 @@
 _target_: src.backbone.franca.FrancaWrapper
 name: franca_vitb14
 device: cuda
-weights: LAION # IN21K
+weights: IN21K # IN21K
 use_rasa_head: True
+res: 518

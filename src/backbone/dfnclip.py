@@ -11,10 +11,11 @@ class DFNCLIPWrapper(nn.Module):
     DFN CLIP (Apple) backbone wrapper using OpenCLIP.
     """
 
-    def __init__(self, name="DFN2B-CLIP-ViT-B-16", device="cuda"):
+    def __init__(self, name="DFN2B-CLIP-ViT-B-16", device="cuda", res=224):
         super().__init__()
         self.name = name
         self.device = device
+        self.res=res
         
         self.patch_size = 16 if "16" in name else 14
         hg_name = "hf-hub:apple/" + name
@@ -38,13 +39,16 @@ class DFNCLIPWrapper(nn.Module):
             self.embed_dim = 1280
         else:
             raise ValueError(f"Unknown DFN CLIP model variant: {name}")
-
-    def make_image_transform(self, img_size):
+        
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
         """Create transform for DFN CLIP that matches OpenCLIP's preprocessing."""
         # OpenCLIP normalizes with ImageNet stats
         return T.Compose([
-            T.Resize(img_size, interpolation=InterpolationMode.BICUBIC),
-            T.CenterCrop((img_size, img_size)),
+            T.Resize(self.res, interpolation=InterpolationMode.BICUBIC),
+            T.CenterCrop((self.res, self.res)),
             T.ToTensor(),
             T.Normalize(mean=(0.48145466, 0.4578275, 0.40821073),
                        std=(0.26862954, 0.26130258, 0.27577711))

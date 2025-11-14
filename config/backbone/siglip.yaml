@@ -1,3 +1,4 @@
 _target_: src.backbone.siglip.SigLIPWrapper
-name: siglip-base-patch16-224  # Change as needed by hydra overwrite when initiating the job
+name: siglip2-base-patch16-512  # Change as needed by hydra overwrite when initiating the job
 device: cuda
+res: 518

@@ -10,12 +10,12 @@ class DinoV2Wrapper(nn.Module):
     DinoV2 backbone wrapper.
     """
 
-    def __init__(self, name="dinov2-small", device="cuda"):
+    def __init__(self, name="dinov2-small", device="cuda", res=518):
         super().__init__()
         self.name = name
         self.device = device
         self.patch_size=14 # all dino v2 models have patch size=14
-        
+        self.res = res
         self.model = AutoModel.from_pretrained(f"facebook/{name}")
         self.model.to(self.device).eval()
         self.processor = AutoImageProcessor.from_pretrained(f"facebook/{name}", do_rescale=False, do_center_crop=False, do_resize=False)
@@ -31,12 +31,14 @@ class DinoV2Wrapper(nn.Module):
             self.embed_dim = 1536
         else:
             raise ValueError(f"Unknown DINOv2 model variant: {name}")
-
-    def make_image_transform(self, img_size):
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
         """Create transform for RADIO - resize for batching, convert to tensor."""
         return T.Compose([
-            T.Resize(img_size, interpolation=InterpolationMode.BILINEAR),
-            T.CenterCrop((img_size, img_size)),
+            T.Resize(self.res, interpolation=InterpolationMode.BILINEAR),
+            T.CenterCrop((self.res, self.res)),
             T.ToTensor(),
         ])
         

@@ -32,7 +32,7 @@ def logger(args, base_log_dir):
     return writer, new_version, new_log_dir
 
 
-def get_dataloaders(cfg, backbone, is_evaluation=False, mean=None, std=None, shuffle=True):
+def get_dataloaders(cfg, backbone, is_evaluation=False, shuffle=True):
     """Get dataloaders for either training or evaluation.
 
     Args:
@@ -40,37 +40,8 @@ def get_dataloaders(cfg, backbone, is_evaluation=False, mean=None, std=None, shu
         backbone: Backbone model for normalization parameters
         is_evaluation: If True, use evaluation dataset config, else use training dataset config
     """
-    # Default ImageNet normalization values
-    default_mean = [0.485, 0.456, 0.406]
-    default_std = [0.229, 0.224, 0.225]
-
-    if mean is None:
-        try:
-            mean = backbone.config["mean"]
-        except (AttributeError, KeyError):
-            mean = default_mean
-            print(f"Warning: Using default mean values: {mean}")
-
-    if std is None:
-        try:
-            std = backbone.config["std"]
-        except (AttributeError, KeyError):
-            std = default_std
-            print(f"Warning: Using default std values: {std}")
-
-    """
-    Here's the original image transforms for reference, we need to handle teachers, each needing different transforms, hence we leave it to teacher wrappers.
-    # T.Compose(
-    #     [
-    #         T.Resize(cfg.img_size, interpolation=InterpolationMode.BILINEAR),
-    #         T.CenterCrop((cfg.img_size, cfg.img_size)),
-    #         T.ToTensor(),
-    #         T.Normalize(mean=mean, std=std),
-    #     ]
-    # )
-    """
     transforms = {
-        "image": backbone.make_image_transform(cfg.img_size),
+        "image": backbone.make_image_transform(),
         "label": (
             T.Compose(
                 [

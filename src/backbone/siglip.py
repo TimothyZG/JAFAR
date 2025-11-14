@@ -11,18 +11,19 @@ class SigLIPWrapper(nn.Module):
     SigLIP backbone wrapper.
     """
 
-    def __init__(self, name="siglip-base-patch16-512", device="cuda"):
+    def __init__(self, name="siglip-base-patch16-512", device="cuda", res=512):
         super().__init__()
         self.name = name
         self.device = device
         self.patch_size=16 # All siglip ViTs has patch size 16
+        self.res=res
         hg_name="google/"+name
         if "siglipv2" in name:
             self.model = Siglip2VisionModel.from_pretrained(hg_name)
         else:
             self.model = SiglipVisionModel.from_pretrained(hg_name)
         self.model.to(device)
-        self.processor = AutoProcessor.from_pretrained(hg_name, do_rescale=False, do_center_crop=False, do_resize=False)
+        self.processor = AutoProcessor.from_pretrained(hg_name, do_rescale=False, do_resize=False)
         
         self.model.eval()
         if "small" in name:
@@ -36,11 +37,14 @@ class SigLIPWrapper(nn.Module):
         else:
             raise ValueError(f"Unknown SigLIP model variant: {name}")
 
-    def make_image_transform(self, img_size):
+    def get_identifiable_name(self):
+        return self.name
+    
+    def make_image_transform(self):
         """Create transform for SigLIP - resize for batching, convert to tensor."""
         return T.Compose([
-            T.Resize(img_size, interpolation=InterpolationMode.BILINEAR),
-            T.CenterCrop((img_size, img_size)),
+            T.Resize(self.res, interpolation=InterpolationMode.BILINEAR),
+            T.CenterCrop((self.res, self.res)),
             T.ToTensor()
         ])
         

@@ -1,0 +1,32 @@
+# eval_ensemble.yaml
+defaults:
+  - base
+  - dataset_evaluation: ade20k
+  - _self_
+
+eval:
+  task: "seg"  
+  upsampler: none
+
+train_dataloader:
+  batch_size: 32
+
+val_dataloader:
+  batch_size: 4
+
+target_size: 448
+
+metrics:
+  seg:
+    num_classes: ${dataset_evaluation.num_classes}
+
+sanity: false
+
+ensemble:
+  backbone_dir: "config/backbone"
+  head_dir: "checkpoints/semseg-linear"
+  backbones: [dinov2, dinov3, siglip, franca, dfnclip, radio]
+output_dir: ensemble_results
+
+project_root: ${hydra:runtime.cwd}
+dataroot: ${project_root}/../datasets

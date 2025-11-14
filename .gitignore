@@ -7,3 +7,4 @@ gitignore
 logs
 checkpoints
 inference_outputs/
+outputs/

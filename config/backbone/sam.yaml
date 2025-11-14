@@ -1,3 +1,4 @@
 _target_: src.backbone.sam.SamWrapper
 name: samvit_base_patch16.sa1b
 device: cuda
+res: 1024
