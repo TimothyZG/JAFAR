@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --time=3:00:00
+#SBATCH --time=5:00:00
 #SBATCH --account=aip-gpleiss
 #SBATCH --output=logs/tz_train_probes%j.out
 #SBATCH --mail-user=tiange.zhou@outlook.com
 #SBATCH --mail-type=ALL
-#SBATCH --gres=gpu:h100:1
+#SBATCH --gres=gpu:l40s:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 
@@ -44,6 +44,9 @@ ADAPTOR=clip # backbone, dino_v2, sam, siglip, clip
 # python -u evaluation/tz_train_probes.py backbone=sam backbone.name=samvit_base_patch16.sa1b eval.upsampler=$UPSAMPLER img_size=512 train_dataloader.batch_size=16
 
 # Evaluate Ensembles
-python -u evaluation/tz_eval_ensembles.py
+# python -u evaluation/tz_eval_ensembles.py
 
+# Train channel concat ensemble lp
+# python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov2","dinov3","radio"] num_epochs=12 head=lp
+python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov3","radio"] num_epochs=8 head=mlp
 # sbatch evaluation/tz_train_probes.sh

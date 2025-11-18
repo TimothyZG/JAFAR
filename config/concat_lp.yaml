@@ -1,0 +1,47 @@
+# concat_lp.yaml - Config for training concatenated linear probes
+defaults:
+  - base
+  - dataset_evaluation: ade20k
+  - _self_
+
+# Evaluation settings
+eval:
+  task: "seg"
+  upsampler: none  # Not used for concat probe, but kept for compatibility
+
+# Training parameters
+num_epochs: 8
+
+optimizer:
+  lr: 1e-3
+  wd: 1e-5
+
+train_dataloader:
+  batch_size: 32
+
+val_dataloader:
+  batch_size: 4
+
+# Image and target size
+img_size: 448
+target_size: ${img_size}
+
+# Metrics settings
+metrics:
+  seg:
+    num_classes: ${dataset_evaluation.num_classes}
+
+# Concatenated ensemble settings
+concat_ensemble:
+  backbone_dir: "config/backbone"
+  # List of backbones to concatenate features from
+  # Each backbone will have its own dataloader with backbone-specific transforms
+  # Features will be upsampled to max spatial size and concatenated along channel dim
+  backbones: [dinov3, radio] # [dinov2, dinov3, siglip, franca, dfnclip, radio]
+
+sanity: false
+
+project_root: ${hydra:runtime.cwd}
+dataroot: ${project_root}/../datasets
+
+head: lp
