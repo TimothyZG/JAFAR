@@ -41,7 +41,7 @@ ADAPTOR=clip # backbone, dino_v2, sam, siglip, clip
 # python -u evaluation/tz_train_probes.py backbone=dfnclip backbone.name=DFN2B-CLIP-ViT-B-16 eval.upsampler=$UPSAMPLER img_size=224
 
 # For SAM
-# python -u evaluation/tz_train_probes.py backbone=sam backbone.name=samvit_base_patch16.sa1b eval.upsampler=$UPSAMPLER img_size=512
+# python -u evaluation/tz_train_probes.py backbone=sam backbone.name=samvit_base_patch16.sa1b eval.upsampler=$UPSAMPLER img_size=512 train_dataloader.batch_size=16
 
 # Evaluate Ensembles
 python -u evaluation/tz_eval_ensembles.py

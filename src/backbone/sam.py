@@ -20,7 +20,7 @@ class SamWrapper(nn.Module):
         self.res=res
         self.model.eval()
         if "base" in name:
-            self.embed_dim = 768
+            self.embed_dim = 256 # 768 note we're using Sam's neck, which contains normalization.
         elif "large" in name:
             self.embed_dim = 1024
         else:
@@ -45,8 +45,9 @@ class SamWrapper(nn.Module):
         x = self.model.pos_drop(x)
         x = self.model.patch_drop(x)
         x = self.model.norm_pre(x)
-        spacial = self.model.blocks(x).permute(0,3,1,2) # B,C,H,W is the desired output shape
-        x = self.model.neck(spacial)
+        x = self.model.blocks(x)
+        x = x.permute(0,3,1,2) # B,C,H,W is the desired output shape
+        spacial = self.model.neck(x)
         cls = self.model.head(x)
         B,C,H,W = spacial.shape
         expected = img.shape[2] // self.patch_size         # e.g., 1024/16 = 64

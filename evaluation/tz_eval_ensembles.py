@@ -88,9 +88,23 @@ class EnsembleEvaluator:
         return logits
     
     def compute_majvote_ensemble(self, indices, all_preds):
-        """Majority voting: most common prediction across selected models"""
+        """Majority voting: most common prediction across selected models with random tie-breaking"""
         pred_stack = all_preds[list(indices)]  # (num_models_in_ensemble, B, H, W)
-        maj_pred = torch.mode(pred_stack, dim=0)[0]  # (B, H, W)
+
+        # For ensembles of size 2 or when ties can occur, use random tie-breaking
+        if len(indices) == 2:
+            # When models disagree, randomly pick one
+            # Generate random binary mask for tie-breaking
+            agree_mask = pred_stack[0] == pred_stack[1]  # Where models agree
+            random_choice = torch.randint(0, 2, pred_stack[0].shape, device=pred_stack.device)
+
+            # Where they agree, use the agreed value; where they disagree, random choice
+            maj_pred = torch.where(agree_mask, pred_stack[0],
+                                   torch.where(random_choice == 0, pred_stack[0], pred_stack[1]))
+        else:
+            # For size > 2, use torch.mode (still has tie issues but less severe)
+            maj_pred = torch.mode(pred_stack, dim=0)[0]  # (B, H, W)
+
         return maj_pred
 
     
