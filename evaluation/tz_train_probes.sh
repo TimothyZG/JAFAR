@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=5:00:00
+#SBATCH --time=6:00:00
 #SBATCH --account=aip-gpleiss
 #SBATCH --output=logs/tz_train_probes%j.out
 #SBATCH --mail-user=tiange.zhou@outlook.com
@@ -47,6 +47,6 @@ ADAPTOR=clip # backbone, dino_v2, sam, siglip, clip
 # python -u evaluation/tz_eval_ensembles.py
 
 # Train channel concat ensemble lp
-# python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov2","dinov3","radio"] num_epochs=12 head=lp
-python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov3","radio"] num_epochs=8 head=mlp
+python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov2","franca","radio"] num_epochs=16 head=lp
+# python -u evaluation/tz_train_concat_probes.py concat_ensemble.backbones=["dinov3","dinov2"] num_epochs=16 head=mlp
 # sbatch evaluation/tz_train_probes.sh

@@ -277,11 +277,6 @@ def main(cfg):
         backbone = instantiate(backbone_cfg)
         backbones.append(backbone)
 
-        # IMPORTANT: Reset split to 'train' before each dataloader creation
-        # to prevent config mutation from affecting subsequent backbones
-        # TODO: fix this in dataloader instantiate function
-        
-        cfg.dataset_evaluation.split = "train"
         train_loader, val_loader = get_dataloaders(cfg, backbone, is_evaluation=True)
         train_dataloaders.append(train_loader)
         val_dataloaders.append(val_loader)

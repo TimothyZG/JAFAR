@@ -57,6 +57,7 @@ def get_dataloaders(cfg, backbone, is_evaluation=False, shuffle=True):
 
     if is_evaluation:
         # For evaluation datasets
+        cfg.dataset_evaluation.split = "train"
         train_dataset = instantiate(
             cfg.dataset_evaluation,
             transform=transforms["image"],
